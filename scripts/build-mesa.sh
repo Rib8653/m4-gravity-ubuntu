@@ -98,6 +98,19 @@ if [[ -d "$TOP/mesa/debian-overrides" ]]; then
     cp -a "$TOP/mesa/debian-overrides/." debian/
 fi
 
+# Leave out the AMD drivers (radeonsi, RADV). A Mac mini has no AMD GPU (Gravity
+# also removes amdgpu from its kernel), and in Mesa 26.3 they need libdrm >= 2.4.133,
+# newer than Ubuntu 26.04's.
+if [[ "${MESA_KEEP_AMD:-0}" != 1 ]]; then
+    sed -i -e 's/^\(\s*GALLIUM_DRIVERS += \)radeonsi /\1/' \
+           -e 's/^\(\s*VULKAN_DRIVERS += \)amd /\1/' debian/rules
+    if grep -qE '^\s*(GALLIUM_DRIVERS \+= .*\bradeonsi\b|VULKAN_DRIVERS \+= .*\bamd\b)' debian/rules; then
+        die "could not remove the AMD drivers from debian/rules; update build-mesa.sh"
+    fi
+    sed -i '/00-radv-defaults\.conf/d' debian/mesa-vulkan-drivers.install
+    log "Left out the AMD drivers (radeonsi, RADV)"
+fi
+
 # Drop the Debian/Ubuntu patches that no longer apply to the newer source.
 export QUILT_PATCHES=debian/patches
 if [[ -s debian/patches/series ]]; then
