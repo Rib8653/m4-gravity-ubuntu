@@ -21,6 +21,38 @@ need apt-get dpkg-buildpackage dch quilt git xz
 BUILD="$WORK/build/mesa"
 VERSION="${MESA_UPSTREAM_VERSION}-${MESA_DEB_REVISION}"
 UPVER="${MESA_UPSTREAM_VERSION}"
+# Packaging fixes for Ubuntu's 26.0 packaging on Mesa 26.3, applied to debian/rules
+# (idempotent):
+# - dh_missing: Mesa 26.3 installs files that Ubuntu's .install lists do not
+#   cover (for example new tools). List them in mesa-not-installed.txt instead of failing.
+# - dh_makeshlibs -c4 fails when a library exports new symbols, which a newer
+#   Mesa does. Report them instead (-c1).
+patch_rules() {
+    sed -i 's/dh_makeshlibs -a -- -c4/dh_makeshlibs -a -- -c1/' debian/rules
+    if ! grep -q '^override_dh_missing:' debian/rules; then
+        printf '\noverride_dh_missing:\n\tdh_missing --list-missing 2>&1 | tee ../mesa-not-installed.txt\n' >>debian/rules
+    fi
+}
+
+finish() {
+    mkdir -p "$DEBS"
+    mv ../*.deb "$DEBS/"
+    [[ -s ../mesa-not-installed.txt ]] && cp ../mesa-not-installed.txt "$OUT/" &&
+        warn "some Mesa files were not packaged; see $OUT/mesa-not-installed.txt"
+    log "Mesa packages are in $DEBS"
+}
+
+# MESA_RESUME=1: reuse the compiled tree from the last run and only redo packaging.
+if [[ "${MESA_RESUME:-0}" == 1 && -f "$BUILD/mesa-$UPVER/debian/rules" ]]; then
+    cd "$BUILD/mesa-$UPVER"
+    patch_rules
+    log "Resuming the Mesa packaging in $PWD (no recompile)"
+    rm -f ../*.deb
+    DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us -nc
+    finish
+    exit 0
+fi
+
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
 cd "$BUILD"
@@ -140,6 +172,8 @@ DEBFULLNAME="Gravity Ubuntu builders" DEBEMAIL="noreply@gravitylinux.org" \
 
 grep -q "asahi" debian/rules || die "debian/rules does not enable the asahi driver"
 
+patch_rules
+
 log "Installing build dependencies"
 apt-get build-dep -y ./
 # Build dependencies that Mesa 26.3 adds over Ubuntu's 26.0 packaging:
@@ -151,6 +185,4 @@ apt-get install -y --no-install-recommends libegl-dev libgles-dev librust-bitfla
 log "Building Mesa packages"
 DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us
 
-mkdir -p "$DEBS"
-mv ../*.deb "$DEBS/"
-log "Mesa packages are in $DEBS"
+finish
