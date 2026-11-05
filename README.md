@@ -89,10 +89,11 @@ and unit tests.
 Notes:
 
 * **Kernel base config.** Gravity derives its config from the Asahi Fedora
-  16K config in a pinned SRPM (`KERNEL_BASE_SRPM_*`). The build downloads it
-  and checks its SHA-256. If `download.copr.fedorainfracloud.org` is
-  unreachable, pass the config yourself:
-  `KERNEL_BASE_CONFIG=/path/kernel-aarch64-16k-fedora.config make kernel`.
+  16K config in a pinned SRPM (`KERNEL_BASE_SRPM_*`). COPR has since deleted
+  that build (404). The build then falls back automatically to Asahi Linux's
+  own 16K config (`KERNEL_FALLBACK_CONFIG_*`, pinned by commit and SHA-256).
+  The test kernel build, including the M4 GPU driver, used that config. To use
+  another base config: `KERNEL_BASE_CONFIG=/path/to/config make kernel`.
   The build then applies Gravity's `gravity-aarch64.config`, `gravity.config`
   and `gravity-trim.config`, then [`kernel/ubuntu.config`](kernel/ubuntu.config).
   It fails if any line of [`kernel/required.config`](kernel/required.config) is

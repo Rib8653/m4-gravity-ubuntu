@@ -23,11 +23,16 @@ mkdir -p "$BUILD" "$DEBS"
 base_config="${KERNEL_BASE_CONFIG:-}"
 if [[ -z "$base_config" ]]; then
     srpm="$SRC/dl/$(basename "$KERNEL_BASE_SRPM_URL")"
-    fetch_file "$KERNEL_BASE_SRPM_URL" "$KERNEL_BASE_SRPM_SHA256" "$srpm" ||
-        die "cannot download the Asahi base SRPM; pass KERNEL_BASE_CONFIG=/path/to/$KERNEL_BASE_CONFIG_NAME"
-    need bsdtar
-    base_config="$BUILD/$KERNEL_BASE_CONFIG_NAME"
-    bsdtar -xOf "$srpm" "$KERNEL_BASE_CONFIG_NAME" >"$base_config"
+    if fetch_file "$KERNEL_BASE_SRPM_URL" "$KERNEL_BASE_SRPM_SHA256" "$srpm"; then
+        need bsdtar
+        base_config="$BUILD/$KERNEL_BASE_CONFIG_NAME"
+        bsdtar -xOf "$srpm" "$KERNEL_BASE_CONFIG_NAME" >"$base_config"
+    else
+        warn "Gravity's base SRPM is unavailable; using Asahi Linux's pinned 16K config instead"
+        base_config="$SRC/dl/asahi-linux-16k.config"
+        fetch_file "$KERNEL_FALLBACK_CONFIG_URL" "$KERNEL_FALLBACK_CONFIG_SHA256" "$base_config" ||
+            die "no base config could be downloaded; pass KERNEL_BASE_CONFIG=/path/to/$KERNEL_BASE_CONFIG_NAME"
+    fi
 fi
 [[ -s "$base_config" ]] || die "base config $base_config is empty"
 
