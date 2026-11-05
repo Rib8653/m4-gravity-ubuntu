@@ -73,7 +73,7 @@ fetch_file() {
     fi
     log "Downloading $url"
     mkdir -p "$(dirname "$dest")"
-    curl -fL --retry 4 --retry-delay 2 -o "$dest.part" "$url" || { rm -f "$dest.part"; return 1; }
+    curl -fL --connect-timeout 20 --retry 2 --retry-delay 2 -o "$dest.part" "$url" || { rm -f "$dest.part"; return 1; }
     echo "$sum  $dest.part" | sha256sum -c --status || { rm -f "$dest.part"; die "checksum mismatch: $url"; }
     mv "$dest.part" "$dest"
 }
