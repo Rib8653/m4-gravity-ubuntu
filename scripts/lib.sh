@@ -15,6 +15,18 @@ DEBS="$OUT/debs"
 : "${JOBS:=$(nproc)}"
 
 export DEBIAN_FRONTEND=noninteractive
+
+# Ubuntu 25.10+ uses Rust coreutils (uutils) by default. Its `install -D` fails
+# when parallel make jobs create the same directory, as the kernel's
+# dtbs_install does. Put the GNU tools first on PATH when they are available.
+if [[ -x /usr/bin/gnuinstall ]]; then
+    _gnubin="${TMPDIR:-/tmp}/gravity-gnubin"
+    mkdir -p "$_gnubin"
+    for _t in install mkdir cp mv ln; do
+        [[ -x "/usr/bin/gnu$_t" ]] && ln -sf "/usr/bin/gnu$_t" "$_gnubin/$_t"
+    done
+    export PATH="$_gnubin:$PATH"
+fi
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$TOP" log -1 --format=%ct 2>/dev/null || date +%s)}"
 
 log()  { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
