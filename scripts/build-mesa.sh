@@ -39,6 +39,19 @@ patch_rules() {
     fi
 }
 
+# Run inside the unpacked source tree. A new container (docker run --rm)
+# starts without these, so the resume path needs them too.
+install_build_deps() {
+    log "Installing build dependencies"
+    apt-get update
+    apt-get build-dep -y ./
+    # Build dependencies that Mesa 26.3 adds over Ubuntu's 26.0 packaging:
+    #   libegl-dev, libgles-dev  Gravity's Apple9 (M4) drm-shim test runner
+    #   librust-bitflags-dev     panfrost kraid compiler (bitflags >= 2.9.1)
+    # Ubuntu's get-wraps-from-cargo-registry.py maps installed crates into subprojects/.
+    apt-get install -y --no-install-recommends libegl-dev libgles-dev librust-bitflags-dev
+}
+
 finish() {
     mkdir -p "$DEBS"
     mv ../*.deb "$DEBS/"
@@ -51,6 +64,7 @@ finish() {
 if [[ "${MESA_RESUME:-0}" == 1 && -f "$BUILD/mesa-$UPVER/debian/rules" ]]; then
     cd "$BUILD/mesa-$UPVER"
     patch_rules
+    install_build_deps
     log "Resuming the Mesa packaging in $PWD (no recompile)"
     rm -f ../*.deb
     DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us -nc
@@ -179,13 +193,7 @@ grep -q "asahi" debian/rules || die "debian/rules does not enable the asahi driv
 
 patch_rules
 
-log "Installing build dependencies"
-apt-get build-dep -y ./
-# Build dependencies that Mesa 26.3 adds over Ubuntu's 26.0 packaging:
-#   libegl-dev, libgles-dev  Gravity's Apple9 (M4) drm-shim test runner
-#   librust-bitflags-dev     panfrost kraid compiler (bitflags >= 2.9.1)
-# Ubuntu's get-wraps-from-cargo-registry.py maps installed crates into subprojects/.
-apt-get install -y --no-install-recommends libegl-dev libgles-dev librust-bitflags-dev
+install_build_deps
 
 log "Building Mesa packages"
 DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us
