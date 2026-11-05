@@ -101,7 +101,9 @@ done
 KVER="$(linux-version list | linux-version sort --reverse | head -1)"
 lsinitrd "/boot/initrd.img-$KVER" >/tmp/initrd.list
 grep -q 'load-gravity-firmware.sh' /tmp/initrd.list
-grep -q 'nvme-apple\|nvme_apple' /tmp/initrd.list
+# The NVMe driver must be reachable early: built in, or a module in the initramfs.
+grep -q 'nvme-apple\|nvme_apple' /tmp/initrd.list ||
+    grep -q 'nvme-apple\|nvme_apple' "/lib/modules/$KVER/modules.builtin"
 rm -f /tmp/initrd.list
 
 /usr/sbin/gravity-update-boot /boot/efi/m1n1/boot.bin
