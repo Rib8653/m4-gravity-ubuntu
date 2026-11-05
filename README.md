@@ -160,10 +160,16 @@ What was done while building this port (November 2026):
 * m1n1: stage 1 and stage 2 build with the M4 patch and the logo payload. That
   local build substituted Ubuntu's packaged crates, because crates.io was
   unreachable there.
-* Kernel: the Gravity and Ubuntu fragments pass `olddefconfig` with every M4
-  option kept, using Ubuntu 26.04's rustc 1.93 and bindgen 0.72.1. That run
-  used a stand-in 16K Asahi config, because the Fedora SRPM host was
-  unreachable. See the commit log for full-build results.
+* Kernel: built as `.deb` packages from Gravity's tree with Ubuntu 26.04's
+  rustc 1.93 and bindgen 0.72.1, on the fallback Asahi 16K base config. It
+  includes the M4 GPU module (`asahi_m4.ko.zst`) and `t8132-j773g.dtb`.
+* Image: a full `FLAVOR=server` build under qemu-user. It checked that dracut
+  includes Gravity's firmware hook and that `boot.bin` (m1n1 + DTB + gzipped
+  U-Boot) is generated. It also checked the shim/GRUB layout on the ESP, the
+  `grub.cfg`/`fstab` UUIDs, and the 4 KiB-aligned ext4 images. The
+  installer step then produced `installer_data.json` and the OS zip.
+* Mesa: not built here (no arm64 host). Ubuntu's Debian patches apply to
+  Gravity's Mesa 26.3, and the two subprojects Ubuntu lacks are bundled.
 
 **Not validated: booting on an M4 Mac mini.** Report results in the issues.
 
