@@ -142,9 +142,11 @@ grep -q "asahi" debian/rules || die "debian/rules does not enable the asahi driv
 
 log "Installing build dependencies"
 apt-get build-dep -y ./
-# Gravity's Asahi drm-shim tools add an Apple9 (M4) test runner that links
-# against EGL/GLES. Ubuntu's 26.0 build dependencies do not include those.
-apt-get install -y --no-install-recommends libegl-dev libgles-dev
+# Build dependencies that Mesa 26.3 adds over Ubuntu's 26.0 packaging:
+#   libegl-dev, libgles-dev  Gravity's Apple9 (M4) drm-shim test runner
+#   librust-bitflags-dev     panfrost kraid compiler (bitflags >= 2.9.1)
+# Ubuntu's get-wraps-from-cargo-registry.py maps installed crates into subprojects/.
+apt-get install -y --no-install-recommends libegl-dev libgles-dev librust-bitflags-dev
 
 log "Building Mesa packages"
 DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us
