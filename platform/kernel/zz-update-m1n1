@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run by the kernel package's postinst.d and postrm.d hooks: refresh the
+# device tree link and the ESP's m1n1/boot.bin after a kernel is installed or removed.
+set -e
+[ -x /usr/sbin/gravity-update-boot ] || exit 0
+/usr/sbin/gravity-update-boot || echo "zz-update-m1n1: failed; run gravity-update-boot manually" >&2
+exit 0

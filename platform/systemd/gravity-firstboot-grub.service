@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=Install GRUB onto the ESP and regenerate grub.cfg (first boot)
+After=local-fs.target
+RequiresMountsFor=/boot /boot/efi
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/gravity-ubuntu/firstboot-grub.sh
+
+[Install]
+WantedBy=multi-user.target

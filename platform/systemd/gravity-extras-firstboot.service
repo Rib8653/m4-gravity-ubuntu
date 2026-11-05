@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=Install extra Gravity packages from the ESP
+ConditionPathExistsGlob=/boot/efi/gravity/extras/*.deb
+After=local-fs.target
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+TimeoutSec=0
+RemainAfterExit=yes
+ExecStart=/usr/libexec/gravity-ubuntu/install-extras.sh
+
+[Install]
+WantedBy=multi-user.target

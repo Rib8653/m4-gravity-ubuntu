@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=Set up swap on first boot
+ConditionVirtualization=no
+# 8G of swap on 16G (and smaller) machines, as in Gravity Linux.
+ConditionMemory=<=16G
+ConditionPathExists=!/var/swap/swapfile
+After=local-fs.target systemd-growfs-root.service
+
+[Service]
+Type=oneshot
+TimeoutSec=0
+RemainAfterExit=yes
+ExecStart=/usr/libexec/gravity-ubuntu/setup-swap.sh 8G
+
+[Install]
+WantedBy=multi-user.target

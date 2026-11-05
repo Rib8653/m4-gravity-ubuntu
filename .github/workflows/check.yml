@@ -1,0 +1,35 @@
+name: check
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y shellcheck zip
+      - run: make check
+
+  platform-debs:
+    # Builds the architecture-independent glue packages; they need no compiler.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y dpkg-dev
+      - run: make platform
+      - uses: actions/upload-artifact@v4
+        with:
+          name: platform-debs
+          path: out/debs/*.deb
+
+  uboot:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y build-essential bison flex libssl-dev libgnutls28-dev uuid-dev swig python3-dev device-tree-compiler bc
+      - run: make uboot
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uboot-deb
+          path: out/debs/u-boot-gravity-apple_*.deb

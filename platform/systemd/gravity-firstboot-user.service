@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT
+[Unit]
+Description=Create the first user account
+After=systemd-user-sessions.service plymouth-quit-wait.service
+Before=getty@tty1.service display-manager.service
+ConditionPathExists=/dev/tty1
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/bin/plymouth quit
+ExecStart=/usr/libexec/gravity-ubuntu/firstboot-user.sh
+StandardInput=tty
+StandardOutput=tty
+StandardError=journal
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+
+[Install]
+WantedBy=multi-user.target

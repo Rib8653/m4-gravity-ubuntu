@@ -1,0 +1,64 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Unpack the Apple vendor firmware (Wi-Fi, Bluetooth, ...) from the system ESP
+# into /vendorfw, before udev starts and drivers ask for it.
+# Ubuntu port of Gravity's dracut load-gravity-firmware.sh.
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+
+. /scripts/functions
+
+if [ -e /vendorfw ]; then
+    log_success_msg "Gravity: vendor firmware was loaded by the bootloader"
+    exit 0
+fi
+
+prop=/proc/device-tree/chosen/gravity,efi-system-partition
+if [ ! -r "$prop" ]; then
+    log_warning_msg "Gravity: no gravity,efi-system-partition in the device tree; vendor firmware not loaded"
+    exit 0
+fi
+esp_uuid="$(tr -d '\000' < "$prop")"
+
+modprobe -q apple-mailbox || true
+modprobe -q nvme-apple || true
+
+i=0
+while [ "$i" -lt 50 ]; do
+    ls -d /sys/bus/platform/drivers/nvme-apple/*.nvme/nvme/nvme*/nvme*n1 >/dev/null 2>&1 && break
+    sleep 0.1
+    i=$((i + 1))
+done
+
+# Partition nodes appear on devtmpfs shortly after the namespace does.
+dev=""
+i=0
+while [ "$i" -lt 50 ]; do
+    dev="$(blkid -l -t PARTUUID="$esp_uuid" -o device 2>/dev/null || true)"
+    [ -n "$dev" ] && break
+    sleep 0.1
+    i=$((i + 1))
+done
+if [ -z "$dev" ]; then
+    log_warning_msg "Gravity: system ESP (PARTUUID $esp_uuid) not found; vendor firmware not loaded"
+    exit 0
+fi
+
+mnt=/run/.system-efi
+mkdir -p "$mnt"
+if ! mount -t vfat -o ro "$dev" "$mnt"; then
+    log_warning_msg "Gravity: could not mount the system ESP $dev"
+    exit 0
+fi
+if [ -e "$mnt/vendorfw/firmware.cpio" ]; then
+    ( cd / && cpio --quiet -i < "$mnt/vendorfw/firmware.cpio" )
+    log_success_msg "Gravity: vendor firmware unpacked"
+else
+    log_warning_msg "Gravity: vendor firmware not found in the ESP"
+fi
+umount "$mnt"
+exit 0

@@ -1,0 +1,24 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Copy the vendor firmware to a tmpfs at /usr/lib/firmware/vendor on the root
+# filesystem, so that drivers loaded later can find it.
+# Ubuntu port of Gravity's dracut install-gravity-firmware.sh.
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+
+. /scripts/functions
+
+[ -d /vendorfw ] || exit 0
+
+target="${rootmnt}/usr/lib/firmware/vendor"
+if [ ! -d "$target" ]; then
+    log_warning_msg "Gravity: $target is missing on the root filesystem"
+    exit 0
+fi
+mount -t tmpfs -o mode=0755 vendorfw "$target"
+cp -a /vendorfw/. "$target/"
+exit 0

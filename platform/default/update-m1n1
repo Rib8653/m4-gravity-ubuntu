@@ -1,0 +1,8 @@
+# Configuration for update-m1n1 (Gravity Linux on Ubuntu).
+# boot.bin = m1n1 stage 2 + device trees + gzip(U-Boot) + options from /etc/m1n1.conf
+
+M1N1="/usr/lib/gravity-boot/m1n1.bin"
+U_BOOT="/usr/lib/gravity-boot/u-boot-nodtb.bin"
+# gravity-update-boot points this link at the newest kernel's device trees.
+# Only the M4 Mac mini device tree is included.
+DTBS="/usr/lib/gravity-boot/dtb/apple/t8132-j773g.dtb"

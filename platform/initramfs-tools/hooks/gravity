@@ -1,0 +1,38 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# initramfs-tools hook for Apple silicon (M4 Mac mini).
+#
+# Ubuntu 26.04 builds initramfs images with dracut by default, and then
+# Gravity's own dracut modules (91kernel-modules-gravity, 99gravity-firmware)
+# are used. This hook gives the same result for systems that use
+# initramfs-tools instead: the drivers needed to reach NVMe, USB, HID and the
+# SMC early, plus the tools that load the vendor firmware from the system ESP.
+
+PREREQ=""
+prereqs() { echo "$PREREQ"; }
+case "$1" in
+    prereqs) prereqs; exit 0 ;;
+esac
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Module names follow Gravity's initcpio/dracut lists. Missing modules are
+# skipped, so the same list works across kernel configs.
+manual_add_modules \
+    apple-mailbox nvme-apple pinctrl-apple-gpio \
+    macsmc macsmc-rtkit \
+    i2c-apple i2c-pasemi-platform tps6598x apple-dart dwc3 dwc3-of-simple \
+    nvmem-apple-efuses phy-apple-atc xhci-plat-hcd xhci-pci pcie-apple gpio_macsmc \
+    spi-apple spi-hid-apple spi-hid-apple-of \
+    rtc-macsmc spmi-apple-controller apple_nvmem_spmi simple-mfd-spmi nvmem_spmi_mfd \
+    apple-dockchannel dockchannel-hid apple-rtkit-helper \
+    apple-sio mux-apple-display-crossbar phy-apple-dptx \
+    vfat nls_cp437 nls_iso8859-1 nls_ascii nls_utf8
+
+# m1n1 can append the firmware cpio to the initramfs itself (as /vendorfw);
+# otherwise init-top/gravity-firmware unpacks it there from the ESP.
+mkdir -p "$DESTDIR/usr/lib/firmware"
+[ -e "$DESTDIR/usr/lib/firmware/vendor" ] || ln -s /vendorfw "$DESTDIR/usr/lib/firmware/vendor"
+
+copy_exec /usr/sbin/blkid /usr/sbin
+copy_exec /usr/bin/cpio /usr/bin

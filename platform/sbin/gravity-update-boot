@@ -1,0 +1,48 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Point /usr/lib/gravity-boot/dtb at the newest installed kernel's device
+# trees, then rebuild the ESP's m1n1/boot.bin (m1n1 + DTB + U-Boot).
+#
+# The kernel's postinst.d and postrm.d hooks run this. You can also run it by
+# hand. Arguments are passed on to update-m1n1 (e.g. a target boot.bin path).
+#
+# GRAVITY_ROOT and UPDATE_M1N1 exist for the test suite.
+set -e
+
+ROOT="${GRAVITY_ROOT:-}"
+UPDATE_M1N1="${UPDATE_M1N1:-/usr/sbin/update-m1n1}"
+DTB_LINK="$ROOT/usr/lib/gravity-boot/dtb"
+WANT_DTB=apple/t8132-j773g.dtb
+
+# Ubuntu's GRUB adds a `devicetree` line whenever /boot/dtb or /boot/dtb-<ver>
+# exists. That would replace the device tree that m1n1 fills in at boot and
+# break the system, so refuse to continue if one exists.
+for f in "$ROOT"/boot/dtb "$ROOT"/boot/dtb-*; do
+    if [ -e "$f" ] || [ -L "$f" ]; then
+        echo "gravity-update-boot: $f exists; GRUB would load it instead of m1n1's device tree." >&2
+        echo "gravity-update-boot: remove it (flash-kernel creates it, for example), then run update-grub." >&2
+        exit 1
+    fi
+done
+
+# bindeb-pkg kernels install their device trees in /usr/lib/linux-image-<version>.
+newest=""
+for d in $(ls -d "$ROOT"/usr/lib/linux-image-*/ 2>/dev/null | sort -rV); do
+    if [ -e "$d$WANT_DTB" ]; then
+        newest="$(basename "$d")"
+        newest="${newest#linux-image-}"
+        break
+    fi
+done
+
+if [ -z "$newest" ]; then
+    echo "gravity-update-boot: no installed kernel ships $WANT_DTB; boot.bin left unchanged" >&2
+    exit 0
+fi
+
+mkdir -p "$(dirname "$DTB_LINK")"
+ln -sfn "/usr/lib/linux-image-$newest" "$DTB_LINK.new"
+mv -Tf "$DTB_LINK.new" "$DTB_LINK"
+echo "gravity-update-boot: using device trees from kernel $newest"
+
+exec "$UPDATE_M1N1" "$@"
