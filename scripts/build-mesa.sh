@@ -27,8 +27,13 @@ UPVER="${MESA_UPSTREAM_VERSION}"
 #   cover (for example new tools). List them in mesa-not-installed.txt instead of failing.
 # - dh_makeshlibs -c4 fails when a library exports new symbols, which a newer
 #   Mesa does. Report them instead (-c1).
+# - Mesa 26.3 splits driver defaults into drirc.d/00-<driver>-defaults.conf,
+#   including 00-asahi-defaults.conf and 00-hk-defaults.conf for the M4 GPU.
+#   Ubuntu's 26.0 lists only 00-mesa-defaults.conf, so ship them all.
 patch_rules() {
     sed -i 's/dh_makeshlibs -a -- -c4/dh_makeshlibs -a -- -c1/' debian/rules
+    sed -i 's|^usr/share/drirc.d/00-mesa-defaults.conf$|usr/share/drirc.d/*.conf|' debian/libgl1-mesa-dri.install
+    sed -i '\|^usr/share/drirc.d/|d' debian/mesa-vulkan-drivers.install
     if ! grep -q '^override_dh_missing:' debian/rules; then
         printf '\noverride_dh_missing:\n\tdh_missing --list-missing 2>&1 | tee ../mesa-not-installed.txt\n' >>debian/rules
     fi

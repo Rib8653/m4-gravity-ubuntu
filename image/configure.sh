@@ -78,6 +78,9 @@ apt-get install -y "${flavor_pkgs[@]}" \
 if ls /var/cache/gravity-repo/libgl1-mesa-dri_*.deb >/dev/null 2>&1; then
     dpkg-query -W -f='${Version}\n' libgl1-mesa-dri | grep -q gravity ||
         { echo "Ubuntu's Mesa was installed instead of Gravity's" >&2; exit 1; }
+    # Per-driver defaults for the M4 GPU (OpenGL and Vulkan), new in Mesa 26.3.
+    test -e /usr/share/drirc.d/00-asahi-defaults.conf
+    test -e /usr/share/drirc.d/00-hk-defaults.conf
 else
     echo "WARNING: no Gravity Mesa packages; Ubuntu's Mesa may not support the M4 GPU" >&2
 fi
