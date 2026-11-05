@@ -22,7 +22,7 @@ RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.s
       device-tree-compiler swig python3-dev libgnutls28-dev uuid-dev \
       imagemagick fontconfig \
       mmdebstrap ubuntu-keyring e2fsprogs dosfstools mtools apt-utils uuid-runtime \
-      qemu-user-static binfmt-support \
+      qemu-user-binfmt binfmt-support \
       gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
       shellcheck \
  && rm -rf /var/lib/apt/lists/*

@@ -20,7 +20,7 @@ case "$FLAVOR" in ubuntu|kubuntu|server) ;; *) die "FLAVOR must be ubuntu, kubun
 [[ $EUID == 0 ]] || die "run as root (mmdebstrap/chroot)"
 if ! is_native_arm64; then
     [[ -e /proc/sys/fs/binfmt_misc/qemu-aarch64 ]] ||
-        die "aarch64 binfmt is not registered (install qemu-user-static / qemu-user-binfmt)"
+        die "aarch64 binfmt is not registered (install qemu-user-binfmt)"
 fi
 
 IMG="$WORK/image-$FLAVOR"
