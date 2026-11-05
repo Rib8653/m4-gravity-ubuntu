@@ -142,6 +142,9 @@ grep -q "asahi" debian/rules || die "debian/rules does not enable the asahi driv
 
 log "Installing build dependencies"
 apt-get build-dep -y ./
+# Gravity's Asahi drm-shim tools add an Apple9 (M4) test runner that links
+# against EGL/GLES. Ubuntu's 26.0 build dependencies do not include those.
+apt-get install -y --no-install-recommends libegl-dev libgles-dev
 
 log "Building Mesa packages"
 DEB_BUILD_OPTIONS="nocheck parallel=$JOBS ${DEB_BUILD_OPTIONS:-}" dpkg-buildpackage -b -uc -us
