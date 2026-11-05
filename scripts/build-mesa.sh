@@ -50,6 +50,47 @@ log "Creating the orig tarball from Gravity Mesa ${MESA_REF:0:12}"
 git -C "$SRC/mesa" archive --format=tar --prefix="mesa-$UPVER/" HEAD | xz -T0 >"mesa_$UPVER.orig.tar.xz"
 tar -xf "mesa_$UPVER.orig.tar.xz"
 tar -xf "$debtar" -C "mesa-$UPVER"
+
+# Ubuntu's packaging forbids meson downloads (--wrap-mode=nodownload), but
+# Mesa 26.3 needs venus-protocol as a subproject. Bundle Gravity's pinned
+# snapshot the way its mesa.spec does.
+wrap="mesa-$UPVER/subprojects/venus-protocol.wrap"
+if [[ -f "$wrap" ]]; then
+    grep -qx "revision = $VENUS_PROTOCOL_COMMIT" "$wrap" ||
+        die "venus-protocol.wrap no longer matches VENUS_PROTOCOL_COMMIT; update config/sources.env"
+    vdir="$(sed -n 's/^directory = //p' "$wrap")"
+    # Fetched by commit (verified by fetch_git), like meson's own [wrap-git].
+    fetch_git "$(sed -n 's/^url = //p' "$wrap")" "$VENUS_PROTOCOL_COMMIT" "$SRC/venus-protocol"
+    mkdir -p "mesa-$UPVER/subprojects/$vdir"
+    git -C "$SRC/venus-protocol" archive HEAD | tar -x -C "mesa-$UPVER/subprojects/$vdir"
+fi
+
+# provide_wrap_file NAME: unpack a [wrap-file] subproject from its pinned
+# source_url and source_hash (both taken from Mesa's own .wrap), and apply its
+# patch_directory overlay, so meson finds it without downloading anything.
+provide_wrap_file() {
+    local w="mesa-$UPVER/subprojects/$1.wrap" dir url file hash patchdir
+    [[ -f "$w" ]] || return 0
+    dir="$(sed -n 's/^directory *= *//p' "$w")"
+    url="$(sed -n 's/^source_url *= *//p' "$w")"
+    file="$(sed -n 's/^source_filename *= *//p' "$w")"
+    hash="$(sed -n 's/^source_hash *= *//p' "$w")"
+    patchdir="$(sed -n 's/^patch_directory *= *//p' "$w")"
+    [[ -n "$dir" && -n "$url" && -n "$hash" ]] || die "$1.wrap is not a [wrap-file] with a pinned hash"
+    fetch_file "$url" "$hash" "$SRC/dl/$file" || die "could not download $url"
+    mkdir -p "mesa-$UPVER/subprojects/$dir"
+    tar -xf "$SRC/dl/$file" -C "mesa-$UPVER/subprojects/$dir" --strip-components=1
+    if [[ -n "$patchdir" ]]; then
+        cp -a "mesa-$UPVER/subprojects/packagefiles/$patchdir/." "mesa-$UPVER/subprojects/$dir/"
+    fi
+    log "Bundled subproject $1 ($dir)"
+}
+# Crates that Mesa 26.3 needs in newer versions than Ubuntu 26.04 packages:
+#   xml-rs: the panfrost kraid compiler needs xml >= 1.2.1 (Ubuntu has 1.2.0).
+for w in ${MESA_BUNDLED_WRAPS:-xml-rs}; do
+    provide_wrap_file "$w"
+done
+
 cd "mesa-$UPVER"
 
 if [[ -d "$TOP/mesa/debian-overrides" ]]; then
