@@ -25,6 +25,21 @@ rm -rf "$BUILD"
 mkdir -p "$BUILD"
 cd "$BUILD"
 
+# apt-get source needs deb-src entries and fresh package lists (the Docker
+# image deletes its lists to save space).
+if ! grep -rqsE '^(Types:.*deb-src|deb-src )' /etc/apt/sources.list /etc/apt/sources.list.d/; then
+    log "Enabling deb-src package sources"
+    if [[ -f /etc/apt/sources.list.d/ubuntu.sources ]]; then
+        sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+    fi
+    if grep -qs '^deb ' /etc/apt/sources.list; then
+        sed -n 's/^deb /deb-src /p' /etc/apt/sources.list >/etc/apt/sources.list.d/gravity-deb-src.list
+    fi
+    grep -rqsE '^(Types:.*deb-src|deb-src )' /etc/apt/sources.list /etc/apt/sources.list.d/ ||
+        die "could not enable deb-src entries; add them for $UBUNTU_SUITE by hand"
+fi
+apt-get update
+
 log "Fetching Ubuntu's mesa packaging ($UBUNTU_SUITE)"
 apt-get source --only-source --download-only "mesa/$UBUNTU_SUITE" ||
     apt-get source --only-source --download-only mesa
